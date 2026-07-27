@@ -61,7 +61,7 @@ export const Logs: React.FC = () => {
       <Card>
         <LogTable
           logs={filtered}
-          onIpClick={(ip) => setFilters((f) => ({ ...f, srcIp: ip }))}
+          onIpClick={(ip: string) => setFilters((f) => ({ ...f, srcIp: ip }))}
           loading={isLoading}
         />
       </Card>
