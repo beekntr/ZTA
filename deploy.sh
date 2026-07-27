@@ -18,14 +18,14 @@ else
 fi
 
 TARGET_DIR="/var/www/zta-dashboard"
-if [ "$PWD" != "$TARGET_DIR" ]; then
-    if [ -d "$TARGET_DIR" ]; then
-        cd "$TARGET_DIR"
-    else
-        echo "➜ Cloning repository to $TARGET_DIR..."
-        sudo git clone https://github.com/beekntr/ZTA.git "$TARGET_DIR"
-        cd "$TARGET_DIR"
-    fi
+if [ -d "$TARGET_DIR" ]; then
+    echo "➜ Pulling latest code into $TARGET_DIR..."
+    cd "$TARGET_DIR"
+    sudo git pull origin main
+else
+    echo "➜ Cloning repository to $TARGET_DIR..."
+    sudo git clone https://github.com/beekntr/ZTA.git "$TARGET_DIR"
+    cd "$TARGET_DIR"
 fi
 
 echo "📦 [2/6] Setting up Production Environment Config..."
