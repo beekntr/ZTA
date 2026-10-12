@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wifi, WifiOff, Clock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { getHealth } from '../../services/api';
 import type { HealthState } from '../../services/api';
 import { AdminButton } from './AdminButton';
+import { ThemeToggle } from './ThemeToggle';
 
-const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
-  '/logs': 'Live Logs',
-  '/rules': 'Firewall Rules',
-  '/devices': 'Device Registry',
-  '/threats': 'Threat Intelligence',
+const PAGES: Record<string, { title: string; subtitle: string }> = {
+  '/': { title: 'Dashboard', subtitle: 'Firewall activity over the last 7 days' },
+  '/logs': { title: 'Live logs', subtitle: 'Every packet the firewall logged' },
+  '/threats': { title: 'Threat intel', subtitle: 'Who is attacking from the internet' },
+  '/rules': { title: 'Firewall rules', subtitle: 'Policies enforced by nftables' },
+  '/devices': { title: 'Devices', subtitle: 'Registered hosts and their trust scores' },
+};
+
+const HEALTH: Record<HealthState | 'checking', { dot: string; label: string; hint?: string }> = {
+  checking: { dot: 'bg-line-strong', label: 'Checking' },
+  ok: { dot: 'bg-good-mark', label: 'Online' },
+  degraded: { dot: 'bg-warning-mark', label: 'Degraded', hint: 'API reachable, but the database or firewall check failed' },
+  down: { dot: 'bg-critical-mark', label: 'Offline', hint: 'The API is not responding' },
 };
 
 export const Navbar: React.FC = () => {
@@ -35,64 +42,29 @@ export const Navbar: React.FC = () => {
     return () => clearInterval(id);
   }, []);
 
-  const title = PAGE_TITLES[pathname] ?? 'ZTA Dashboard';
+  const page = PAGES[pathname] ?? { title: 'ZTA Firewall', subtitle: '' };
+  const status = HEALTH[health ?? 'checking'];
 
   return (
-    <header className="flex items-center justify-between px-6 py-3 border-b border-[#1e2a45] bg-[#0a0e1a]/90 backdrop-blur-md shrink-0">
-      <div>
-        <h2 className="text-base font-semibold text-slate-200">{title}</h2>
-        <p className="text-xs text-slate-500 font-mono mt-0.5">
-          Zero Trust Architecture · Admin Panel
-        </p>
+    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-4 sm:px-6 lg:px-8">
+      <div className="min-w-0">
+        <h1 className="truncate text-base font-semibold text-fg">{page.title}</h1>
+        <p className="hidden truncate text-xs text-muted sm:block">{page.subtitle}</p>
       </div>
 
-      <div className="flex items-center gap-5">
-        {/* Clock */}
-        <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono">
-          <Clock className="w-3.5 h-3.5" />
-          <span>{format(time, 'HH:mm:ss')}</span>
-          <span className="text-slate-600">·</span>
-          <span>{format(time, 'dd MMM yyyy')}</span>
-        </div>
-
-        {/* Connection status */}
-        <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${
-            health === null
-              ? 'border-slate-600/40 text-slate-500 bg-slate-800/30'
-              : health === 'ok'
-                ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
-                : health === 'degraded'
-                  ? 'border-amber-500/30 text-amber-400 bg-amber-500/10'
-                  : 'border-red-500/30 text-red-400 bg-red-500/10'
-          }`}
-          title={health === 'degraded' ? 'API reachable, but the database or firewall check failed' : undefined}
+      <div className="flex items-center gap-2">
+        <span className="hidden text-xs tabular-nums text-muted lg:inline">
+          {format(time, 'EEE d MMM · HH:mm:ss')}
+        </span>
+        <span
+          className="flex h-8 items-center gap-2 rounded-full border border-line px-3 text-xs font-medium text-fg-2"
+          title={status.hint}
         >
-          {health === null ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-slate-500 animate-pulse" />
-              Checking…
-            </>
-          ) : health === 'ok' ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <Wifi className="w-3 h-3" />
-              Connected
-            </>
-          ) : health === 'degraded' ? (
-            <>
-              <AlertTriangle className="w-3 h-3" />
-              Degraded
-            </>
-          ) : (
-            <>
-              <span className="w-2 h-2 rounded-full bg-red-400" />
-              <WifiOff className="w-3 h-3" />
-              Disconnected
-            </>
-          )}
-        </div>
-
+          <span className={`h-2 w-2 rounded-full ${status.dot}`} aria-hidden="true" />
+          <span className="hidden sm:inline">{status.label}</span>
+          <span className="sr-only sm:hidden">{status.label}</span>
+        </span>
+        <ThemeToggle />
         <AdminButton />
       </div>
     </header>

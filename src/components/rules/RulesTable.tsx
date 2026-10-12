@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { format, parseISO } from 'date-fns';
-import { Trash2, ShieldCheck, ShieldX } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { ActionBadge } from '../ui/Badge';
+import { SkeletonRows } from '../ui/Skeleton';
 import { useToast } from '../ui/Toast';
 import { useDeleteRule } from '../../hooks/useRules';
 import { errorMessage } from '../../services/api';
+import { formatTime } from '../../lib/format';
 import type { FirewallRule } from '../../types';
 
 interface Props {
   rules: FirewallRule[];
   loading?: boolean;
 }
+
+const HEADERS = ['Name', 'Source', 'Destination', 'Protocol', 'Action', 'Direction', 'Created', 'Status', ''];
 
 export const RulesTable: React.FC<Props> = ({ rules, loading }) => {
   const { mutateAsync: deleteRule } = useDeleteRule();
@@ -21,90 +25,66 @@ export const RulesTable: React.FC<Props> = ({ rules, loading }) => {
     setDeleting((s) => new Set([...s, id]));
     try {
       await deleteRule(id);
-      success('Rule Deactivated', `Rule #${id} was removed from the firewall`);
+      success('Rule deactivated', `Rule #${id} was removed from the firewall`);
     } catch (err) {
-      error('Delete Failed', errorMessage(err));
+      error('Could not deactivate rule', errorMessage(err));
     } finally {
-      setDeleting((s) => { const n = new Set(s); n.delete(id); return n; });
+      setDeleting((s) => {
+        const n = new Set(s);
+        n.delete(id);
+        return n;
+      });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-2 animate-pulse">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-10 bg-[#1e2a45]/60 rounded" />
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <SkeletonRows rows={4} />;
+  if (rules.length === 0) return <p className="py-12 text-center text-sm text-muted">No firewall rules yet</p>;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-[#1e2a45]">
-      <table className="w-full text-xs">
-        <thead className="bg-[#1e2a45]/40">
-          <tr>
-            {['ID', 'Name', 'Src IP', 'Dst IP', 'Proto', 'Port', 'Action', 'Direction', 'Created', 'Status', ''].map(
-              (h) => (
-                <th key={h} className="text-left px-3 py-2.5 font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                  {h}
-                </th>
-              ),
-            )}
+    <div className="-mx-5 overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            {HEADERS.map((h, i) => (
+              <th key={h || i} className={`whitespace-nowrap pb-2 pr-4 font-medium ${i === 0 ? 'pl-5' : ''}`}>
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#1e2a45]/40">
+        <tbody>
           {rules.map((rule) => (
-            <tr key={rule.id} className="hover:bg-[#1e2a45]/20 transition-colors">
-              <td className="px-3 py-2.5 font-mono text-slate-600">{rule.id}</td>
-              <td className="px-3 py-2.5 text-slate-200 max-w-32 truncate">{rule.rule_name}</td>
-              <td className="px-3 py-2.5 font-mono text-slate-400">{rule.src_ip ?? '—'}</td>
-              <td className="px-3 py-2.5 font-mono text-slate-400">{rule.dst_ip ?? '—'}</td>
-              <td className="px-3 py-2.5 text-slate-500 uppercase">{rule.protocol}</td>
-              <td className="px-3 py-2.5 text-slate-500">{rule.dst_port ?? '—'}</td>
-              <td className="px-3 py-2.5">
-                <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    rule.action.toLowerCase() === 'block' || rule.action.toLowerCase() === 'drop'
-                      ? 'bg-red-900/40 text-red-400'
-                      : 'bg-emerald-900/40 text-emerald-400'
-                  }`}
-                >
-                  {rule.action}
+            <tr key={rule.id} className={`border-t border-line ${rule.is_active ? '' : 'text-muted'}`}>
+              <td className="max-w-48 truncate py-3 pl-5 pr-4 font-medium" title={rule.rule_name}>
+                <span className={rule.is_active ? 'text-fg' : ''}>{rule.rule_name}</span>
+              </td>
+              <td className="py-3 pr-4 font-mono text-xs">{rule.src_ip ?? 'Any'}</td>
+              <td className="py-3 pr-4 font-mono text-xs">{rule.dst_ip ?? 'Any'}</td>
+              <td className="whitespace-nowrap py-3 pr-4 text-xs uppercase">
+                {rule.protocol ?? 'any'}
+                {rule.dst_port ? `:${rule.dst_port}` : ''}
+              </td>
+              <td className="py-3 pr-4">
+                <ActionBadge action={rule.action} />
+              </td>
+              <td className="py-3 pr-4 text-xs capitalize">{rule.direction}</td>
+              <td className="whitespace-nowrap py-3 pr-4 text-xs tabular-nums">{formatTime(rule.created_at, 'd MMM yyyy')}</td>
+              <td className="py-3 pr-4">
+                <span className="inline-flex items-center gap-1.5 text-xs">
+                  <span className={`h-1.5 w-1.5 rounded-full ${rule.is_active ? 'bg-good-mark' : 'bg-line-strong'}`} />
+                  {rule.is_active ? 'Active' : 'Inactive'}
                 </span>
               </td>
-              <td className="px-3 py-2.5 text-slate-500 capitalize">{rule.direction}</td>
-              <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
-                {(() => {
-                  try {
-                    return format(parseISO(rule.created_at), 'MM-dd HH:mm');
-                  } catch {
-                    return rule.created_at;
-                  }
-                })()}
-              </td>
-              <td className="px-3 py-2.5">
-                {rule.is_active ? (
-                  <span className="flex items-center gap-1 text-emerald-400">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Active</span>
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-slate-600">
-                    <ShieldX className="w-3.5 h-3.5" />
-                    <span>Inactive</span>
-                  </span>
-                )}
-              </td>
-              <td className="px-3 py-2.5">
+              <td className="py-3 pr-5 text-right">
                 {rule.is_active ? (
                   <Button
-                    variant="danger"
+                    variant="ghost"
                     size="sm"
-                    icon={<Trash2 className="w-3 h-3" />}
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
                     loading={deleting.has(rule.id)}
                     onClick={() => handleDelete(rule.id)}
                     aria-label={`Deactivate rule ${rule.id}`}
+                    title="Deactivate rule"
                   />
                 ) : null}
               </td>
@@ -112,9 +92,6 @@ export const RulesTable: React.FC<Props> = ({ rules, loading }) => {
           ))}
         </tbody>
       </table>
-      {rules.length === 0 && (
-        <p className="text-center text-slate-600 py-12">No firewall rules defined</p>
-      )}
     </div>
   );
 };

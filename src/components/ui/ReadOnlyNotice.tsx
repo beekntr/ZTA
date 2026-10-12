@@ -7,11 +7,13 @@ export const ReadOnlyNotice: React.FC = () => {
   const isAdmin = useIsAdmin();
   if (isAdmin) return null;
   return (
-    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-xs text-amber-300/90">
-      <Lock className="w-3.5 h-3.5 shrink-0" />
+    <div className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-fg-2 shadow-card">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-text">
+        <Lock className="h-3.5 w-3.5" />
+      </span>
       <span>
-        Public read-only demo. Adding rules, blocking IPs and registering devices need admin mode
-        (button at the top right).
+        You're viewing a read-only demo. Adding rules, blocking IPs and registering devices need admin
+        mode — use <span className="font-medium text-fg">Read-only</span> at the top right.
       </span>
     </div>
   );

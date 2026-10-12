@@ -18,6 +18,13 @@ const INIT = {
   direction: 'input',
 };
 
+const DIRECTIONS = [
+  { value: 'input', label: 'Input' },
+  { value: 'forward', label: 'Forward' },
+  { value: 'output', label: 'Output' },
+  { value: 'all', label: 'All' },
+] as const;
+
 export const AddRuleForm: React.FC = () => {
   const [form, setForm] = useState(INIT);
   const [errors, setErrors] = useState<Partial<typeof INIT>>({});
@@ -61,95 +68,86 @@ export const AddRuleForm: React.FC = () => {
         action: form.action as RuleCreate['action'],
         direction: form.direction as RuleCreate['direction'],
       });
-      success('Rule Added', `"${form.rule_name}" is now active`);
+      success('Rule added', `"${form.rule_name}" is now enforced`);
       setForm(INIT);
     } catch (err) {
-      error('Failed to Add Rule', errorMessage(err));
+      error('Could not add rule', errorMessage(err));
     }
   };
 
   const field = (key: keyof typeof INIT, label: string, placeholder: string, type = 'text', disabled = false) => (
     <div>
-      <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
+      <label htmlFor={`rule-${key}`} className="field-label">
+        {label}
+      </label>
       <input
+        id={`rule-${key}`}
         type={type}
         value={form[key]}
         onChange={set(key)}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full px-3 py-2 rounded-lg bg-[#1e2a45]/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 disabled:opacity-40 ${
-          errors[key] ? 'border-red-500/60' : 'border-[#1e2a45]'
-        }`}
+        aria-invalid={errors[key] ? true : undefined}
+        className={`field ${key.includes('ip') ? 'font-mono' : ''}`}
       />
-      {errors[key] && <p className="text-xs text-red-400 mt-1">{errors[key]}</p>}
+      {errors[key] && <p className="field-error">{errors[key]}</p>}
     </div>
   );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {field('rule_name', 'Rule Name *', 'e.g. Block China Range')}
-      <div className="grid grid-cols-2 gap-3">
-        {field('src_ip', 'Source IP', '0.0.0.0/0 or blank')}
-        {field('dst_ip', 'Destination IP', '0.0.0.0/0 or blank')}
+      {field('rule_name', 'Rule name', 'e.g. Block scanner network')}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {field('src_ip', 'Source IP', 'Any')}
+        {field('dst_ip', 'Destination IP', 'Any')}
       </div>
       <div className="grid grid-cols-3 gap-3">
-        {/* Protocol */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">Protocol</label>
-          <select
-            value={form.protocol}
-            onChange={set('protocol')}
-            className="w-full px-3 py-2 rounded-lg bg-[#1e2a45]/40 border border-[#1e2a45] text-slate-300 text-sm focus:outline-none focus:border-cyan-500/50"
-          >
+          <label htmlFor="rule-protocol" className="field-label">
+            Protocol
+          </label>
+          <select id="rule-protocol" value={form.protocol} onChange={set('protocol')} className="field">
             <option value="tcp">TCP</option>
             <option value="udp">UDP</option>
             <option value="icmp">ICMP</option>
             <option value="any">Any</option>
           </select>
         </div>
-        {/* Port */}
-        {field('dst_port', 'Dst Port', portEnabled ? '1–65535' : 'TCP/UDP only', 'number', !portEnabled)}
-        {/* Action */}
+        {field('dst_port', 'Port', portEnabled ? '1–65535' : 'TCP/UDP only', 'number', !portEnabled)}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">Action</label>
-          <select
-            value={form.action}
-            onChange={set('action')}
-            className="w-full px-3 py-2 rounded-lg bg-[#1e2a45]/40 border border-[#1e2a45] text-slate-300 text-sm focus:outline-none focus:border-cyan-500/50"
-          >
+          <label htmlFor="rule-action" className="field-label">
+            Action
+          </label>
+          <select id="rule-action" value={form.action} onChange={set('action')} className="field">
             <option value="block">Block</option>
             <option value="allow">Allow</option>
           </select>
         </div>
       </div>
-      {/* Direction */}
       <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">Direction</label>
-        <div className="flex gap-2">
-          {(['input', 'forward', 'output', 'all'] as const).map((dir) => (
+        <span className="field-label">Direction</span>
+        <div className="grid grid-cols-4 gap-1 rounded-lg bg-surface-2 p-1" role="radiogroup" aria-label="Direction">
+          {DIRECTIONS.map(({ value, label }) => (
             <button
-              key={dir}
+              key={value}
               type="button"
-              onClick={() => setForm((f) => ({ ...f, direction: dir }))}
-              className={`flex-1 py-2 rounded-lg text-xs font-medium capitalize border transition-all ${
-                form.direction === dir
-                  ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400'
-                  : 'bg-[#1e2a45]/30 border-[#1e2a45] text-slate-500 hover:text-slate-300'
+              role="radio"
+              aria-checked={form.direction === value}
+              onClick={() => setForm((f) => ({ ...f, direction: value }))}
+              className={`h-8 rounded-md text-xs font-medium transition-colors ${
+                form.direction === value ? 'bg-surface text-fg shadow-card ring-1 ring-line' : 'text-fg-2 hover:text-fg'
               }`}
             >
-              {dir}
+              {label}
             </button>
           ))}
         </div>
+        <p className="mt-1.5 text-xs text-muted">
+          Input: traffic to this server · Forward: traffic between zones · All: both
+        </p>
       </div>
-      <Button
-        type="submit"
-        variant="primary"
-        loading={isPending}
-        icon={<Plus className="w-4 h-4" />}
-        className="w-full justify-center"
-      >
-        Add Rule
+      <Button type="submit" variant="primary" loading={isPending} icon={<Plus className="h-4 w-4" />} className="w-full">
+        Add rule
       </Button>
     </form>
   );

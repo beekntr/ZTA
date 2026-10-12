@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Circle } from 'lucide-react';
 import { useLogs } from '../hooks/useLogs';
 import { LogFilters } from '../components/logs/LogFilters';
 import { LogTable } from '../components/logs/LogTable';
@@ -22,6 +21,7 @@ const INIT_FILTERS: FilterState = {
 
 export const Logs: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>(INIT_FILTERS);
+
   // Only query once a complete IP is typed, not on every keystroke.
   const ipFilter = validateIp(filters.srcIp) ? filters.srcIp.trim() : '';
 
@@ -40,21 +40,11 @@ export const Logs: React.FC = () => {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Circle
-              className={`w-2 h-2 fill-current ${filters.autoRefresh ? 'text-emerald-400 animate-pulse' : 'text-slate-600'}`}
-            />
-            <span className="text-xs text-slate-500">
-              {filters.autoRefresh ? 'Auto-refresh ON (5s)' : 'Auto-refresh OFF'}
-            </span>
-            {filters.srcIp && !ipFilter && (
-              <span className="text-xs text-amber-400 ml-2">Type a complete IP address to filter</span>
-            )}
-          </div>
-        </div>
+      <Card padding="p-4">
         <LogFilters filters={filters} onChange={setFilters} />
+        {filters.srcIp && !ipFilter && (
+          <p className="mt-2 text-xs text-warning">Type a complete IP address to filter</p>
+        )}
       </Card>
 
       <Card>

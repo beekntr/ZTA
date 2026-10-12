@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { format, parseISO } from 'date-fns';
-import { ChevronDown, ChevronRight, Download, ChevronLeft } from 'lucide-react';
+import { format } from 'date-fns';
+import { ChevronDown, ChevronRight, ChevronLeft, Download } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { SkeletonRows } from '../ui/Skeleton';
+import { formatNumber, formatTime } from '../../lib/format';
 import type { Log } from '../../types';
 
 interface Props {
@@ -43,6 +45,8 @@ function exportCsv(logs: Log[]) {
   URL.revokeObjectURL(url);
 }
 
+const HEADERS = ['Time', 'Type', 'Source', 'Destination', 'Protocol', 'Port', 'Interface', ''];
+
 export const LogTable: React.FC<Props> = ({ logs, onIpClick, loading }) => {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [page, setPage] = useState(0);
@@ -51,140 +55,107 @@ export const LogTable: React.FC<Props> = ({ logs, onIpClick, loading }) => {
   const totalPages = Math.ceil(safeLogs.length / PAGE_SIZE);
   const pageLogs = safeLogs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  if (loading) {
-    return (
-      <div className="space-y-2 animate-pulse">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-10 bg-border/60 rounded" />
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <SkeletonRows rows={10} />;
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-slate-500">
-          {safeLogs.length.toLocaleString()} logs
-          {totalPages > 1 && ` · page ${page + 1} of ${totalPages}`}
-        </span>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm text-fg-2">
+          <span className="font-medium tabular-nums text-fg">{formatNumber(safeLogs.length)}</span> events
+          {totalPages > 1 && <span className="text-muted"> · page {page + 1} of {totalPages}</span>}
+        </p>
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
-          icon={<Download className="w-3 h-3" />}
+          icon={<Download className="h-3.5 w-3.5" />}
           onClick={() => exportCsv(safeLogs)}
+          disabled={safeLogs.length === 0}
         >
           Export CSV
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-xs">
-          <thead className="bg-border/40">
-            <tr>
-              {['ID', 'Timestamp', 'Type', 'Src IP', 'Dst IP', 'Proto', 'Port', 'Iface', ''].map(
-                (h) => (
-                  <th
-                    key={h}
-                    className="text-left px-3 py-2.5 font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
-                ),
-              )}
+      <div className="-mx-5 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted">
+              {HEADERS.map((h, i) => (
+                <th key={h || i} className={`whitespace-nowrap pb-2 pr-4 font-medium ${i === 0 ? 'pl-5' : ''}`}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/40">
-            {pageLogs.map((log) => (
-              <React.Fragment key={log.id}>
-                <tr
-                  className="hover:bg-border/20 transition-colors cursor-pointer group"
-                  onClick={() => setExpanded(expanded === log.id ? null : log.id)}
-                >
-                  <td className="px-3 py-2.5 font-mono text-slate-600">{log.id}</td>
-                  <td className="px-3 py-2.5 font-mono text-slate-400 whitespace-nowrap">
-                    {(() => {
-                      try {
-                        return format(parseISO(log.timestamp), 'MM-dd HH:mm:ss');
-                      } catch {
-                        return log.timestamp;
-                      }
-                    })()}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <Badge type={log.log_type} />
-                  </td>
-                  <td
-                    className="px-3 py-2.5 font-mono text-cyan-400 hover:text-cyan-300 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onIpClick?.(log.src_ip);
-                    }}
+          <tbody>
+            {pageLogs.map((log) => {
+              const open = expanded === log.id;
+              return (
+                <React.Fragment key={log.id}>
+                  <tr
+                    className={`cursor-pointer border-t border-line transition-colors hover:bg-surface-2 ${open ? 'bg-surface-2' : ''}`}
+                    onClick={() => setExpanded(open ? null : log.id)}
                   >
-                    {log.src_ip}
-                  </td>
-                  <td className="px-3 py-2.5 font-mono text-slate-400">{log.dst_ip}</td>
-                  <td className="px-3 py-2.5 text-slate-500 uppercase">{log.protocol}</td>
-                  <td className="px-3 py-2.5 text-slate-500">
-                    {log.dst_port ?? log.src_port ?? '—'}
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-500">{log.in_iface}</td>
-                  <td className="px-3 py-2.5">
-                    {expanded === log.id ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-cyan-400" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400" />
-                    )}
-                  </td>
-                </tr>
-                {expanded === log.id && (
-                  <tr className="bg-bg/60">
-                    <td colSpan={9} className="px-4 py-3">
-                      <div className="rounded-lg bg-border/30 p-3 border border-border">
-                        <p className="text-xs text-slate-500 mb-1 font-medium">Raw Log</p>
-                        <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap break-all leading-relaxed">
-                          {log.raw_log}
-                        </pre>
-                      </div>
+                    <td className="whitespace-nowrap py-2.5 pl-5 pr-4 text-xs tabular-nums text-fg-2">
+                      {formatTime(log.timestamp, 'dd MMM HH:mm:ss')}
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <Badge type={log.log_type} />
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <button
+                        className="font-mono text-xs text-accent-text hover:underline"
+                        title="Show only this source"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onIpClick?.(log.src_ip);
+                        }}
+                      >
+                        {log.src_ip}
+                      </button>
+                    </td>
+                    <td className="py-2.5 pr-4 font-mono text-xs text-fg-2">{log.dst_ip}</td>
+                    <td className="py-2.5 pr-4 text-xs uppercase text-fg-2">{log.protocol}</td>
+                    <td className="py-2.5 pr-4 text-xs tabular-nums text-fg-2">{log.dst_port ?? log.src_port ?? '—'}</td>
+                    <td className="py-2.5 pr-4 font-mono text-xs text-muted">{log.in_iface}</td>
+                    <td className="py-2.5 pr-5 text-muted">
+                      {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </td>
                   </tr>
-                )}
-              </React.Fragment>
-            ))}
+                  {open && (
+                    <tr className="bg-surface-2">
+                      <td colSpan={HEADERS.length} className="px-5 pb-4 pt-1">
+                        <p className="mb-1.5 text-xs font-medium text-muted">Raw kernel log</p>
+                        <pre className="whitespace-pre-wrap break-all rounded-lg border border-line bg-surface p-3 font-mono text-xs leading-relaxed text-fg-2">
+                          {log.raw_log}
+                        </pre>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
+      {safeLogs.length === 0 && <p className="py-12 text-center text-sm text-muted">No events match these filters</p>}
+
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-3">
+        <div className="mt-4 flex items-center justify-end gap-2">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
-            icon={<ChevronLeft className="w-3.5 h-3.5" />}
+            icon={<ChevronLeft className="h-3.5 w-3.5" />}
             disabled={page === 0}
             onClick={() => setPage((p) => p - 1)}
           >
-            Prev
+            Previous
           </Button>
-          <span className="text-xs text-slate-500">
-            {page + 1} / {totalPages}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage((p) => p + 1)}
-          >
+          <Button variant="secondary" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
             Next
-            <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
+            <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
-      )}
-
-      {safeLogs.length === 0 && (
-        <p className="text-center text-slate-600 py-12">No logs found matching filters</p>
       )}
     </div>
   );

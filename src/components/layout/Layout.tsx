@@ -7,14 +7,17 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  // Start with icons only on narrow screens.
+  const [collapsed, setCollapsed] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0a0e1a]">
+    <div className="flex h-screen overflow-hidden bg-page text-fg">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+        </main>
       </div>
     </div>
   );

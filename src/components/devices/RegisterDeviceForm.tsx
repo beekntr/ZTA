@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cpu } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useRegisterDevice } from '../../hooks/useDevices';
@@ -45,74 +45,52 @@ export const RegisterDeviceForm: React.FC = () => {
         hostname: form.hostname.trim() || undefined,
         zone: form.zone || undefined,
       });
-      success('Device Registered', `${form.ip_address} added to registry`);
+      success('Device registered', `${form.ip_address} added to the registry`);
       setForm(INIT);
     } catch (err) {
-      error('Registration Failed', errorMessage(err));
+      error('Registration failed', errorMessage(err));
     }
   };
 
+  const input = (key: 'ip_address' | 'mac_address' | 'hostname', label: string, placeholder: string, mono = true) => (
+    <div>
+      <label htmlFor={`device-${key}`} className="field-label">
+        {label}
+      </label>
+      <input
+        id={`device-${key}`}
+        type="text"
+        value={form[key]}
+        onChange={set(key)}
+        placeholder={placeholder}
+        aria-invalid={errors[key] ? true : undefined}
+        className={`field ${mono ? 'font-mono' : ''}`}
+      />
+      {errors[key] && <p className="field-error">{errors[key]}</p>}
+    </div>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">IP Address *</label>
-        <input
-          type="text"
-          value={form.ip_address}
-          onChange={set('ip_address')}
-          placeholder="e.g. 192.168.1.100"
-          className={`w-full px-3 py-2 rounded-lg bg-border/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 font-mono ${
-            errors.ip_address ? 'border-red-500/60' : 'border-border'
-          }`}
-        />
-        {errors.ip_address && <p className="text-xs text-red-400 mt-1">{errors.ip_address}</p>}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {input('ip_address', 'IP address', 'e.g. 192.168.20.10')}
+        {input('mac_address', 'MAC address (optional)', 'AA:BB:CC:DD:EE:FF')}
       </div>
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">MAC Address</label>
-        <input
-          type="text"
-          value={form.mac_address}
-          onChange={set('mac_address')}
-          placeholder="AA:BB:CC:DD:EE:FF"
-          className={`w-full px-3 py-2 rounded-lg bg-border/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 font-mono ${
-            errors.mac_address ? 'border-red-500/60' : 'border-border'
-          }`}
-        />
-        {errors.mac_address && <p className="text-xs text-red-400 mt-1">{errors.mac_address}</p>}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {input('hostname', 'Hostname (optional)', 'e.g. workstation-01', false)}
+        <div>
+          <label htmlFor="device-zone" className="field-label">
+            Zone
+          </label>
+          <select id="device-zone" value={form.zone} onChange={set('zone')} className="field">
+            <option value="untrust">Untrusted</option>
+            <option value="trusted">Trusted</option>
+            <option value="dmz">DMZ</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">Hostname</label>
-        <input
-          type="text"
-          value={form.hostname}
-          onChange={set('hostname')}
-          placeholder="e.g. workstation-01"
-          className={`w-full px-3 py-2 rounded-lg bg-border/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 ${
-            errors.hostname ? 'border-red-500/60' : 'border-border'
-          }`}
-        />
-        {errors.hostname && <p className="text-xs text-red-400 mt-1">{errors.hostname}</p>}
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">Zone</label>
-        <select
-          value={form.zone}
-          onChange={set('zone')}
-          className="w-full px-3 py-2 rounded-lg bg-border/40 border border-border text-slate-300 text-sm focus:outline-none focus:border-cyan-500/50"
-        >
-          <option value="untrust">Untrust</option>
-          <option value="trusted">Trusted</option>
-          <option value="dmz">DMZ</option>
-        </select>
-      </div>
-      <Button
-        type="submit"
-        variant="primary"
-        loading={isPending}
-        icon={<Cpu className="w-4 h-4" />}
-        className="w-full justify-center"
-      >
-        Register Device
+      <Button type="submit" variant="primary" loading={isPending} icon={<Plus className="h-4 w-4" />} className="w-full">
+        Register device
       </Button>
     </form>
   );

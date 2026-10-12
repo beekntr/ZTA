@@ -3,26 +3,36 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   ScrollText,
-  ShieldCheck,
-  Cpu,
   Crosshair,
-  ChevronLeft,
-  ChevronRight,
+  ShieldCheck,
+  Server,
+  PanelLeftClose,
+  PanelLeftOpen,
   Shield,
 } from 'lucide-react';
 
 interface NavItem {
   to: string;
   label: string;
-  icon: React.ReactNode;
+  icon: React.ElementType;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { to: '/logs', label: 'Live Logs', icon: <ScrollText className="w-5 h-5" /> },
-  { to: '/rules', label: 'Firewall Rules', icon: <ShieldCheck className="w-5 h-5" /> },
-  { to: '/devices', label: 'Devices', icon: <Cpu className="w-5 h-5" /> },
-  { to: '/threats', label: 'Threat Intel', icon: <Crosshair className="w-5 h-5" /> },
+const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
+  {
+    title: 'Monitor',
+    items: [
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/logs', label: 'Live logs', icon: ScrollText },
+      { to: '/threats', label: 'Threat intel', icon: Crosshair },
+    ],
+  },
+  {
+    title: 'Control',
+    items: [
+      { to: '/rules', label: 'Firewall rules', icon: ShieldCheck },
+      { to: '/devices', label: 'Devices', icon: Server },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -33,65 +43,76 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   return (
     <aside
-      className={`
-        relative flex flex-col border-r border-border bg-bg
-        transition-all duration-300 ease-in-out shrink-0
-        ${collapsed ? 'w-16' : 'w-60'}
-      `}
+      className={`flex shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 ${
+        collapsed ? 'w-[68px]' : 'w-60'
+      }`}
     >
-      {/* Logo */}
-      <div
-        className={`flex items-center gap-3 px-4 py-5 border-b border-border ${collapsed ? 'justify-center' : ''}`}
-      >
-        <div className="relative shrink-0">
-          <Shield className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_8px_rgba(0,212,255,0.6)]" />
-          <div className="absolute inset-0 animate-ping-slow opacity-30">
-            <Shield className="w-8 h-8 text-cyan-400" />
-          </div>
-        </div>
+      {/* Brand */}
+      <div className={`flex h-16 items-center gap-3 border-b border-line px-4 ${collapsed ? 'justify-center px-0' : ''}`}>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-on-accent">
+          <Shield className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </span>
         {!collapsed && (
-          <div>
-            <h1 className="text-sm font-bold text-slate-100 leading-none">ZTA Firewall</h1>
-            <p className="text-[10px] text-cyan-500 mt-0.5 font-mono tracking-widest">
-              ZERO TRUST
-            </p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold leading-tight text-fg">ZTA Firewall</p>
+            <p className="text-xs leading-tight text-muted">Zero Trust Architecture</p>
           </div>
         )}
       </div>
 
-      {/* Nav items */}
-      <nav className="flex-1 py-4 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map(({ to, label, icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) => `
-              flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg
-              text-sm font-medium transition-all duration-200 group
-              ${
-                isActive
-                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 shadow-sm shadow-cyan-500/10'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-border/50'
-              }
-              ${collapsed ? 'justify-center' : ''}
-            `}
-          >
-            <span className="shrink-0">{icon}</span>
-            {!collapsed && <span>{label}</span>}
-          </NavLink>
+      {/* Navigation */}
+      <nav className="flex-1 space-y-5 overflow-y-auto p-3" aria-label="Main">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.title}>
+            {!collapsed && (
+              <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">{group.title}</p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  title={collapsed ? label : undefined}
+                  aria-label={collapsed ? label : undefined}
+                  className={({ isActive }) =>
+                    `flex h-9 items-center gap-3 rounded-lg text-sm font-medium transition-colors ${
+                      collapsed ? 'justify-center' : 'px-3'
+                    } ${
+                      isActive
+                        ? 'bg-accent-soft text-accent-text'
+                        : 'text-fg-2 hover:bg-surface-2 hover:text-fg'
+                    }`
+                  }
+                >
+                  <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+                  {!collapsed && <span>{label}</span>}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
       {/* Collapse toggle */}
-      <button
-        onClick={onToggle}
-        className="flex items-center justify-center m-3 p-2 rounded-lg border border-border text-slate-500 hover:text-cyan-400 hover:border-cyan-500/30 transition-all duration-200"
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        {!collapsed && <span className="ml-2 text-xs">Collapse</span>}
-      </button>
+      <div className="border-t border-line p-3">
+        <button
+          onClick={onToggle}
+          className={`flex h-9 w-full items-center gap-3 rounded-lg text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg ${
+            collapsed ? 'justify-center' : 'px-3'
+          }`}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          ) : (
+            <>
+              <PanelLeftClose className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              <span>Collapse</span>
+            </>
+          )}
+        </button>
+      </div>
     </aside>
   );
 };

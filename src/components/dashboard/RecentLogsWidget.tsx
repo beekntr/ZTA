@@ -1,63 +1,31 @@
 import React from 'react';
-import { format, parseISO } from 'date-fns';
+import { ArrowRight } from 'lucide-react';
 import { Badge } from '../ui/Badge';
+import { SkeletonRows } from '../ui/Skeleton';
 import { useLogs } from '../../hooks/useLogs';
-import { Circle } from 'lucide-react';
+import { formatTime } from '../../lib/format';
 
 export const RecentLogsWidget: React.FC = () => {
-  const { data, isLoading, dataUpdatedAt } = useLogs({ limit: 10 });
-
-  // Defensive: ensure data is always an array
+  const { data, isLoading } = useLogs({ limit: 8 });
   const logs = Array.isArray(data) ? data : [];
 
-  return (
-    <div>
-      {/* Live indicator */}
-      <div className="flex items-center gap-2 mb-3">
-        <Circle className="w-2 h-2 text-emerald-400 fill-emerald-400 animate-pulse" />
-        <span className="text-xs text-slate-500">
-          Live · auto-refresh every 10s
-          {dataUpdatedAt > 0 && (
-            <span className="ml-2 text-slate-600">
-              · updated {format(new Date(dataUpdatedAt), 'HH:mm:ss')}
-            </span>
-          )}
-        </span>
-      </div>
+  if (isLoading) return <SkeletonRows rows={6} />;
+  if (logs.length === 0) return <p className="py-8 text-center text-sm text-muted">No recent events</p>;
 
-      {isLoading ? (
-        <div className="space-y-2 animate-pulse">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-9 bg-border/60 rounded" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {logs.map((log) => (
-            <div
-              key={log.id}
-              className="flex items-center gap-2 py-2 px-3 rounded-lg bg-border/20 hover:bg-border/40 transition-colors"
-            >
-              <Badge type={log.log_type} className="shrink-0" />
-              <span className="font-mono text-xs text-slate-400 shrink-0">{log.src_ip}</span>
-              <span className="text-slate-700 text-xs">→</span>
-              <span className="font-mono text-xs text-slate-500 truncate">{log.dst_ip}</span>
-              <span className="ml-auto text-[10px] text-slate-600 shrink-0">
-                {(() => {
-                  try {
-                    return format(parseISO(log.timestamp), 'HH:mm:ss');
-                  } catch {
-                    return '';
-                  }
-                })()}
-              </span>
-            </div>
-          ))}
-          {logs.length === 0 && (
-            <p className="text-center text-slate-600 text-sm py-6">No recent logs</p>
-          )}
-        </div>
-      )}
-    </div>
+  return (
+    <ul className="-my-1">
+      {logs.map((log) => (
+        <li key={log.id} className="flex items-center gap-3 border-b border-line py-2.5 last:border-0">
+          <span className="w-16 shrink-0 text-xs tabular-nums text-muted">{formatTime(log.timestamp, 'HH:mm:ss')}</span>
+          <Badge type={log.log_type} className="shrink-0" />
+          <span className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-fg-2">
+            <span className="truncate">{log.src_ip}</span>
+            <ArrowRight className="h-3 w-3 shrink-0 text-muted" />
+            <span className="truncate">{log.dst_ip}</span>
+          </span>
+          <span className="ml-auto shrink-0 text-xs uppercase text-muted">{log.protocol}</span>
+        </li>
+      ))}
+    </ul>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, RefreshCw, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 const LOG_TYPES = [
@@ -28,46 +28,43 @@ interface LogFiltersProps {
 
 export const LogFilters: React.FC<LogFiltersProps> = ({ filters, onChange }) => {
   const set = (patch: Partial<LogFiltersState>) => onChange({ ...filters, ...patch });
-  const reset = () => onChange({ srcIp: '', logType: '', protocol: '', autoRefresh: false });
+  const reset = () => onChange({ srcIp: '', logType: '', protocol: '', autoRefresh: filters.autoRefresh });
 
   const hasFilters = filters.srcIp || filters.logType || filters.protocol;
 
   return (
-    <div className="flex flex-wrap gap-3 items-center">
-      {/* IP search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="relative w-full sm:w-56">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
           type="text"
-          placeholder="Filter by IP..."
+          placeholder="Filter by source IP"
+          aria-label="Filter by source IP"
           value={filters.srcIp}
           onChange={(e) => set({ srcIp: e.target.value })}
-          className="pl-9 pr-3 py-2 rounded-lg bg-[#1e2a45]/40 border border-[#1e2a45] text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/40 w-44"
+          className="field pl-9 font-mono"
         />
       </div>
 
-      {/* Log type */}
-      <div className="relative">
-        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-        <select
-          value={filters.logType}
-          onChange={(e) => set({ logType: e.target.value })}
-          className="pl-9 pr-3 py-2 rounded-lg bg-[#1e2a45]/40 border border-[#1e2a45] text-slate-300 text-sm focus:outline-none focus:border-cyan-500/40 appearance-none"
-        >
-          <option value="">All types</option>
-          {LOG_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
+      <select
+        value={filters.logType}
+        onChange={(e) => set({ logType: e.target.value })}
+        aria-label="Log type"
+        className="field w-auto min-w-44"
+      >
+        <option value="">All log types</option>
+        {LOG_TYPES.map((t) => (
+          <option key={t} value={t}>
+            {t.replace(/^ZTA-/, '')}
+          </option>
+        ))}
+      </select>
 
-      {/* Protocol */}
       <select
         value={filters.protocol}
         onChange={(e) => set({ protocol: e.target.value })}
-        className="px-3 py-2 rounded-lg bg-[#1e2a45]/40 border border-[#1e2a45] text-slate-300 text-sm focus:outline-none focus:border-cyan-500/40"
+        aria-label="Protocol"
+        className="field w-auto min-w-36"
       >
         <option value="">All protocols</option>
         <option value="tcp">TCP</option>
@@ -75,32 +72,32 @@ export const LogFilters: React.FC<LogFiltersProps> = ({ filters, onChange }) => 
         <option value="icmp">ICMP</option>
       </select>
 
-      {/* Auto-refresh */}
-      <label className="flex items-center gap-2 cursor-pointer">
-        <div
-          onClick={() => set({ autoRefresh: !filters.autoRefresh })}
-          className={`relative w-9 h-5 rounded-full transition-colors ${
-            filters.autoRefresh ? 'bg-cyan-500/60' : 'bg-[#1e2a45]'
-          }`}
-        >
-          <div
-            className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-              filters.autoRefresh ? 'translate-x-4' : 'translate-x-0.5'
-            }`}
-          />
-        </div>
-        <span className="text-xs text-slate-400 flex items-center gap-1">
-          <RefreshCw className="w-3 h-3" />
-          Auto-refresh
-        </span>
-      </label>
-
-      {/* Clear */}
       {hasFilters && (
-        <Button variant="ghost" size="sm" icon={<X className="w-3 h-3" />} onClick={reset}>
+        <Button variant="ghost" size="sm" icon={<X className="h-3.5 w-3.5" />} onClick={reset}>
           Clear
         </Button>
       )}
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={filters.autoRefresh}
+        onClick={() => set({ autoRefresh: !filters.autoRefresh })}
+        className="ml-auto flex items-center gap-2.5 text-sm text-fg-2"
+      >
+        <span
+          className={`relative h-5 w-9 rounded-full transition-colors ${
+            filters.autoRefresh ? 'bg-accent' : 'bg-line-strong'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+              filters.autoRefresh ? 'translate-x-[18px]' : 'translate-x-0.5'
+            }`}
+          />
+        </span>
+        Auto-refresh
+      </button>
     </div>
   );
 };

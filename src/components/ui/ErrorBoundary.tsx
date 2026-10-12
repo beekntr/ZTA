@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 interface State {
   hasError: boolean;
@@ -26,12 +27,14 @@ export class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <div className="flex flex-col items-center justify-center h-full p-12 text-center">
-            <div className="text-red-400 text-4xl mb-4">⚠</div>
-            <h2 className="text-lg font-semibold text-slate-200 mb-2">Render Error</h2>
-            <p className="text-sm text-slate-500 font-mono max-w-lg break-all">{this.state.error}</p>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-line bg-surface p-12 text-center">
+            <span className="mb-4 grid h-10 w-10 place-items-center rounded-full bg-critical-soft text-critical">
+              <AlertTriangle className="h-5 w-5" />
+            </span>
+            <h2 className="mb-1 text-base font-semibold text-fg">Something went wrong</h2>
+            <p className="max-w-lg break-all font-mono text-xs text-muted">{this.state.error}</p>
             <button
-              className="mt-6 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 text-sm hover:bg-cyan-500/30 transition-colors"
+              className="mt-6 h-9 rounded-lg border border-line-strong bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-2"
               onClick={() => this.setState({ hasError: false, error: '' })}
             >
               Try again

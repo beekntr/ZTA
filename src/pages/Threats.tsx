@@ -1,99 +1,64 @@
 import React from 'react';
-import { Crosshair, Trophy, Activity, Globe } from 'lucide-react';
 import { useAttackers } from '../hooks/useLogs';
 import { useThreatStats } from '../hooks/useStats';
 import { AttackerLeaderboard } from '../components/threats/AttackerLeaderboard';
-import { AttackPatternChart } from '../components/threats/AttackPatternChart';
+import { HourlyAttacksChart, ProtocolBreakdown } from '../components/threats/AttackPatternChart';
 import { LiveAttackFeed } from '../components/threats/LiveAttackFeed';
 import { Card, CardHeader } from '../components/ui/Card';
-import { format, parseISO } from 'date-fns';
+import { Skeleton } from '../components/ui/Skeleton';
+import { formatNumber } from '../lib/format';
 
 export const Threats: React.FC = () => {
-  const { data: attackersRaw, isLoading: attackersLoading } = useAttackers(20);
+  const { data: attackersRaw, isLoading: attackersLoading } = useAttackers(10);
   const { data: threatStats, isLoading: threatsLoading } = useThreatStats(24);
-
   const attackers = Array.isArray(attackersRaw) ? attackersRaw : [];
 
-  // Build geo table from attacker data (top 10)
-  const geoTableData = attackers.slice(0, 10);
+  const hourly = threatStats?.hourly ?? [];
+  const total = hourly.reduce((sum, h) => sum + h.count, 0);
+  const peak = hourly.reduce((best, h) => (h.count > best.count ? h : best), { hour: '', count: 0 });
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Top row: Leaderboard + Live Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader
-            title="Attacker Leaderboard"
-            subtitle="Internet sources dropped in the last 7 days"
-            icon={<Trophy className="w-4 h-4" />}
-          />
-          <AttackerLeaderboard attackers={attackers} loading={attackersLoading} />
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="Live Attack Feed"
-            subtitle="ZTA-INPUT-DROP events — newest first"
-            icon={<Crosshair className="w-4 h-4" />}
-          />
-          <LiveAttackFeed />
-        </Card>
-      </div>
-
-      {/* Attack patterns */}
-      <Card>
-        <CardHeader
-          title="Attack Pattern Analysis"
-          subtitle="Internet attacks per hour and by protocol (own devices excluded)"
-          icon={<Activity className="w-4 h-4" />}
-        />
-        <AttackPatternChart data={threatStats} loading={threatsLoading} />
-      </Card>
-
-      {/* Geographic table */}
-      <Card>
-        <CardHeader
-          title="Geographic Overview"
-          subtitle="IP origin intelligence (top 10 attackers)"
-          icon={<Globe className="w-4 h-4" />}
-        />
-        <div className="overflow-x-auto rounded-lg border border-[#1e2a45]">
-          <table className="w-full text-xs">
-            <thead className="bg-[#1e2a45]/40">
-              <tr>
-                {['Rank', 'IP Address', 'Attempts', 'Last Seen'].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left px-3 py-2.5 font-medium text-slate-500 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1e2a45]/40">
-              {geoTableData.map((a, i) => (
-                <tr key={a.src_ip} className="hover:bg-[#1e2a45]/20 transition-colors">
-                  <td className="px-3 py-2.5 text-slate-600 font-mono">#{i + 1}</td>
-                  <td className="px-3 py-2.5 font-mono text-slate-200">{a.src_ip}</td>
-                  <td className="px-3 py-2.5 text-red-400 font-bold font-mono">
-                    {a.attempts.toLocaleString()}
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-500">
-                    {(() => {
-                      try {
-                        return format(parseISO(a.last_attempt), 'yyyy-MM-dd HH:mm');
-                      } catch {
-                        return a.last_attempt;
-                      }
-                    })()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Two independent columns, so a short card never stretches to match a tall one */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-5">
+        <div className="space-y-4 lg:col-span-3">
+          <Card>
+            <CardHeader
+              title="Attacks per hour"
+              subtitle={
+                threatsLoading
+                  ? 'Internet sources, last 24 hours'
+                  : `${formatNumber(total)} in the last 24 hours${peak.count ? ` · peak ${formatNumber(peak.count)} at ${peak.hour}` : ''}`
+              }
+            />
+            {threatsLoading ? <Skeleton className="h-[240px]" /> : <HourlyAttacksChart data={hourly} />}
+          </Card>
+          <Card>
+            <CardHeader title="Top attackers" subtitle="Internet sources dropped in the last 7 days" />
+            <AttackerLeaderboard attackers={attackers} loading={attackersLoading} />
+          </Card>
         </div>
-      </Card>
+
+        <div className="space-y-4 lg:col-span-2">
+          <Card>
+            <CardHeader title="By protocol" subtitle="Share of attacks, last 24 hours" />
+            {threatsLoading ? <Skeleton className="h-24" /> : <ProtocolBreakdown data={threatStats?.protocols ?? []} />}
+          </Card>
+          <Card>
+            <CardHeader
+              title="Live feed"
+              subtitle="Newest input drops, refreshed every 5 seconds"
+              action={
+                <span className="flex items-center gap-1.5 text-xs font-medium text-fg-2">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-good-mark" aria-hidden="true" />
+                  Live
+                </span>
+              }
+            />
+            <LiveAttackFeed />
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,4 @@
 import React from 'react';
-import { ShieldCheck, Plus, ShieldBan } from 'lucide-react';
 import { useRules } from '../hooks/useRules';
 import { RulesTable } from '../components/rules/RulesTable';
 import { AddRuleForm } from '../components/rules/AddRuleForm';
@@ -16,33 +15,21 @@ export const Rules: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <ReadOnlyNotice />
 
-      {/* Active rules */}
       <Card>
         <CardHeader
-          title="Active Firewall Rules"
-          subtitle={`${activeRules.length} rules enforced`}
-          icon={<ShieldCheck className="w-4 h-4" />}
+          title="Rules"
+          subtitle={`${activeRules.length} active · ${rules.length - activeRules.length} inactive`}
         />
         <RulesTable rules={rules} loading={isLoading} />
       </Card>
 
-      {/* Add + Quick block */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader
-            title="Add New Rule"
-            subtitle="Define custom firewall policy"
-            icon={<Plus className="w-4 h-4" />}
-          />
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-5">
+        <Card className="lg:col-span-3">
+          <CardHeader title="Add a rule" subtitle="Applied to nftables immediately" />
           <AddRuleForm />
         </Card>
-
-        <Card>
-          <CardHeader
-            title="Quick Block"
-            subtitle="Immediately block an IP address"
-            icon={<ShieldBan className="w-4 h-4" />}
-          />
+        <Card className="lg:col-span-2">
+          <CardHeader title="Quick block" subtitle="Drop all traffic from one source" />
           <QuickBlockPanel />
         </Card>
       </div>

@@ -46,10 +46,10 @@ export const AdminButton: React.FC = () => {
           setAdminKey(null);
           info('Admin mode off', 'Back to read-only mode');
         }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-500/30 text-cyan-400 bg-cyan-500/10 text-xs font-medium hover:bg-cyan-500/20 transition-colors"
+        className="flex h-8 items-center gap-1.5 rounded-lg bg-accent-soft px-3 text-xs font-medium text-accent-text transition-colors hover:brightness-95"
         title="Leave admin mode"
       >
-        <LockOpen className="w-3 h-3" />
+        <LockOpen className="h-3.5 w-3.5" />
         Admin
       </button>
     );
@@ -59,40 +59,44 @@ export const AdminButton: React.FC = () => {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-600/40 text-slate-400 bg-slate-800/30 text-xs font-medium hover:text-slate-200 hover:border-slate-500/60 transition-colors"
+        className="flex h-8 items-center gap-1.5 rounded-lg border border-line px-3 text-xs font-medium text-fg-2 transition-colors hover:bg-surface-2 hover:text-fg"
         title="Unlock admin mode"
       >
-        <Lock className="w-3 h-3" />
+        <Lock className="h-3.5 w-3.5" />
         Read-only
       </button>
       <Modal isOpen={open} onClose={close} title="Unlock admin mode" maxWidth="max-w-sm">
-        <form onSubmit={unlock} className="space-y-3">
-          <p className="text-xs text-slate-500">
-            This public dashboard is read-only. Enter the admin key to add rules, block IPs or
-            register devices. The key is kept only for this browser tab.
+        <form onSubmit={unlock} className="space-y-4">
+          <p className="text-sm text-fg-2">
+            This public dashboard is read-only. Enter the admin key to add rules, block IPs or register
+            devices. The key is kept only for this browser tab.
           </p>
-          <input
-            type="password"
-            autoFocus
-            autoComplete="current-password"
-            value={key}
-            onChange={(e) => {
-              setKey(e.target.value);
-              setKeyError('');
-            }}
-            placeholder="Admin key"
-            className={`w-full px-3 py-2 rounded-lg bg-border/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 font-mono ${
-              keyError ? 'border-red-500/60' : 'border-border'
-            }`}
-          />
-          {keyError && <p className="text-xs text-red-400">{keyError}</p>}
+          <div>
+            <label htmlFor="admin-key" className="field-label">
+              Admin key
+            </label>
+            <input
+              id="admin-key"
+              type="password"
+              autoFocus
+              autoComplete="current-password"
+              value={key}
+              onChange={(e) => {
+                setKey(e.target.value);
+                setKeyError('');
+              }}
+              aria-invalid={keyError ? true : undefined}
+              className="field font-mono"
+            />
+            {keyError && <p className="field-error">{keyError}</p>}
+          </div>
           <Button
             type="submit"
             variant="primary"
             loading={checking}
             disabled={!key.trim()}
-            icon={<LockOpen className="w-4 h-4" />}
-            className="w-full justify-center"
+            icon={<LockOpen className="h-4 w-4" />}
+            className="w-full"
           >
             Unlock
           </Button>

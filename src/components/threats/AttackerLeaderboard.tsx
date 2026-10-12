@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { formatDistanceToNow, parseISO } from 'date-fns';
-import { ShieldBan, Globe } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { SkeletonRows } from '../ui/Skeleton';
 import { useToast } from '../ui/Toast';
 import { useBlockIp } from '../../hooks/useRules';
 import { errorMessage } from '../../services/api';
+import { formatNumber, timeAgoShort } from '../../lib/format';
 import type { Attacker, GeoInfo } from '../../types';
 
 interface Props {
@@ -12,10 +12,11 @@ interface Props {
   loading?: boolean;
 }
 
-// HTTPS provider (the old http:// lookup was blocked as mixed content on the
-// HTTPS site). Cached per page load so polling does not repeat lookups.
+// HTTPS provider (an http:// lookup is blocked as mixed content on the HTTPS
+// site). Cached per page load so polling does not repeat lookups.
 const geoCache = new Map<string, Promise<GeoInfo | null>>();
 const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
+const GEO_LOOKUPS = 10;
 
 function fetchGeo(ip: string): Promise<GeoInfo | null> {
   if (PRIVATE_IP.test(ip)) return Promise.resolve(null);
@@ -41,10 +42,9 @@ export const AttackerLeaderboard: React.FC<Props> = ({ attackers: attackersProp,
   const [blocking, setBlocking] = useState<Set<string>>(new Set());
   const [geoData, setGeoData] = useState<Record<string, GeoInfo | null>>({});
 
-  // Fetch geo for top 5 attackers
   useEffect(() => {
     let cancelled = false;
-    attackers.slice(0, 5).forEach((a) => {
+    attackers.slice(0, GEO_LOOKUPS).forEach((a) => {
       fetchGeo(a.src_ip).then((geo) => {
         if (!cancelled) setGeoData((prev) => (a.src_ip in prev ? prev : { ...prev, [a.src_ip]: geo }));
       });
@@ -58,96 +58,61 @@ export const AttackerLeaderboard: React.FC<Props> = ({ attackers: attackersProp,
     setBlocking((s) => new Set([...s, ip]));
     try {
       await blockIp(ip);
-      success('IP Blocked', `${ip} added to blocklist`);
+      success('IP blocked', `${ip} is now dropped by the firewall`);
     } catch (err) {
-      error('Block Failed', errorMessage(err));
+      error('Block failed', errorMessage(err));
     } finally {
-      setBlocking((s) => { const n = new Set(s); n.delete(ip); return n; });
+      setBlocking((s) => {
+        const n = new Set(s);
+        n.delete(ip);
+        return n;
+      });
     }
   };
 
-  const maxAttempts = attackers[0]?.attempts ?? 1;
+  if (loading) return <SkeletonRows rows={6} className="h-12" />;
+  if (attackers.length === 0) return <p className="py-8 text-center text-sm text-muted">No attackers in this period</p>;
 
-  if (loading) {
-    return (
-      <div className="space-y-3 animate-pulse">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-16 bg-border/60 rounded-lg" />
-        ))}
-      </div>
-    );
-  }
+  const maxAttempts = Math.max(1, ...attackers.map((a) => a.attempts));
 
   return (
-    <div className="space-y-2">
+    <ol className="-my-1">
       {attackers.map((attacker, i) => {
         const geo = geoData[attacker.src_ip];
-        const barPct = Math.round((attacker.attempts / maxAttempts) * 100);
+        const place = geo ? [geo.city, geo.country].filter(Boolean).join(', ') : '';
         return (
-          <div
-            key={attacker.src_ip}
-            className="relative flex items-center gap-3 px-4 py-3 rounded-xl bg-border/20 border border-border/60 overflow-hidden hover:border-red-500/20 transition-all group"
-          >
-            {/* Progress bar bg */}
-            <div
-              className="absolute inset-0 bg-red-500/5 transition-all"
-              style={{ width: `${barPct}%` }}
-            />
-
-            {/* Rank */}
-            <span className="relative text-sm font-bold text-slate-600 w-6 text-center shrink-0">
-              #{i + 1}
-            </span>
-
-            {/* IP + Geo */}
-            <div className="relative flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-semibold text-slate-200">
-                  {attacker.src_ip}
-                </span>
-                {geo?.countryCode && (
-                  <span className="text-xs text-slate-500 flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
-                    {geo.country} · {geo.city}
-                  </span>
-                )}
+          <li key={attacker.src_ip} className="flex items-center gap-3 border-b border-line py-3 last:border-0">
+            <span className="w-5 shrink-0 text-xs tabular-nums text-muted">{i + 1}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="truncate font-mono text-sm text-fg">{attacker.src_ip}</span>
+                <span className="shrink-0 text-sm font-medium tabular-nums text-fg">{formatNumber(attacker.attempts)}</span>
               </div>
-              <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500">
-                <span>
-                  {(() => {
-                    try {
-                      return formatDistanceToNow(parseISO(attacker.last_attempt), { addSuffix: true });
-                    } catch {
-                      return attacker.last_attempt;
-                    }
-                  })()}
+              <div className="mt-0.5 flex items-baseline justify-between gap-3 text-xs text-muted">
+                <span className="truncate">
+                  {place || 'Location unknown'}
+                  {geo?.isp ? ` · ${geo.isp}` : ''}
                 </span>
-                {geo?.isp && <span className="truncate max-w-32">{geo.isp}</span>}
+                <span className="shrink-0">{timeAgoShort(attacker.last_attempt)}</span>
+              </div>
+              <div className="mt-2 h-1 rounded-full bg-surface-2">
+                <div
+                  className="h-full rounded-full bg-chart-1"
+                  style={{ width: `${Math.max(2, (attacker.attempts / maxAttempts) * 100)}%` }}
+                />
               </div>
             </div>
-
-            {/* Attempts */}
-            <div className="relative text-right shrink-0">
-              <span className="text-xl font-bold text-red-400 font-mono">
-                {attacker.attempts.toLocaleString()}
-              </span>
-              <p className="text-[10px] text-slate-600">attempts</p>
-            </div>
-
-            {/* Block button */}
             <Button
               variant="danger"
               size="sm"
-              icon={<ShieldBan className="w-3.5 h-3.5" />}
               loading={blocking.has(attacker.src_ip)}
               onClick={() => handleBlock(attacker.src_ip)}
-              className="relative opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
             >
               Block
             </Button>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 };

@@ -5,58 +5,39 @@ interface TrustScoreCircleProps {
   size?: number;
 }
 
-export const TrustScoreCircle: React.FC<TrustScoreCircleProps> = ({ score, size = 72 }) => {
-  const radius = (size - 8) / 2;
+/** Meter: the arc's color carries severity, the number stays in text color. */
+export const TrustScoreCircle: React.FC<TrustScoreCircleProps> = ({ score, size = 52 }) => {
+  const stroke = size >= 64 ? 6 : 4;
+  const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(Math.max(score, 0), 100);
-  const dashOffset = circumference - (progress / 100) * circumference;
-
-  const color =
-    score > 70
-      ? '#00ff88'
-      : score > 30
-        ? '#ffaa00'
-        : '#ff3366';
-
-  const glow =
-    score > 70
-      ? 'drop-shadow(0 0 6px rgba(0,255,136,0.5))'
-      : score > 30
-        ? 'drop-shadow(0 0 6px rgba(255,170,0,0.5))'
-        : 'drop-shadow(0 0 6px rgba(255,51,102,0.5))';
+  const color = score > 70 ? 'var(--good-mark)' : score > 30 ? 'var(--warning-mark)' : 'var(--critical-mark)';
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+    <div
+      className="relative inline-grid shrink-0 place-items-center"
+      style={{ width: size, height: size }}
+      role="meter"
+      aria-valuenow={score}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label="Trust score"
+    >
       <svg width={size} height={size} className="-rotate-90">
-        {/* Track */}
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={stroke} style={{ stroke: 'var(--surface-2)' }} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1e2a45"
-          strokeWidth="6"
-        />
-        {/* Progress */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth="6"
+          strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          style={{ filter: glow, transition: 'stroke-dashoffset 0.6s ease' }}
+          strokeDashoffset={circumference - (progress / 100) * circumference}
+          style={{ stroke: color, transition: 'stroke-dashoffset 0.6s ease' }}
         />
       </svg>
-      <span
-        className="absolute text-sm font-bold font-mono"
-        style={{ color }}
-      >
-        {score}
-      </span>
+      <span className={`absolute font-semibold text-fg ${size >= 64 ? 'text-lg' : 'text-sm'}`}>{score}</span>
     </div>
   );
 };

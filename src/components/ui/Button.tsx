@@ -1,8 +1,8 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-type Variant = 'primary' | 'danger' | 'ghost' | 'success' | 'warning';
-type Size = 'sm' | 'md' | 'lg';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Size = 'sm' | 'md';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -12,49 +12,44 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_STYLES: Record<Variant, string> = {
-  primary:
-    'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/30 hover:border-cyan-400/60 hover:shadow-cyan-500/20',
-  danger:
-    'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30 hover:border-red-400/60 hover:shadow-red-500/20',
-  ghost:
-    'bg-transparent text-slate-400 border border-slate-600/40 hover:bg-slate-700/30 hover:text-slate-300 hover:border-slate-500/60',
-  success:
-    'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 hover:border-emerald-400/60',
-  warning:
-    'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30 hover:border-amber-400/60',
+  primary: 'border-transparent bg-accent text-on-accent hover:bg-accent-hover',
+  secondary: 'border-line-strong bg-surface text-fg hover:bg-surface-2',
+  ghost: 'border-transparent bg-transparent text-fg-2 hover:bg-surface-2 hover:text-fg',
+  danger: 'border-line-strong bg-surface text-critical hover:border-transparent hover:bg-critical-soft',
 };
 
 const SIZE_STYLES: Record<Size, string> = {
-  sm: 'px-2.5 py-1 text-xs',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-6 py-3 text-base',
+  sm: 'h-8 px-3 text-xs gap-1.5',
+  md: 'h-9 px-4 text-sm gap-2',
+};
+
+const ICON_ONLY: Record<Size, string> = {
+  sm: 'h-8 w-8',
+  md: 'h-9 w-9',
 };
 
 export const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
+  variant = 'secondary',
   size = 'md',
   loading = false,
   icon,
   children,
   className = '',
   disabled,
+  type = 'button',
   ...props
 }) => {
   const isDisabled = disabled || loading;
   return (
     <button
       {...props}
+      type={type}
       disabled={isDisabled}
-      className={`
-        inline-flex items-center justify-center gap-2 rounded-lg font-medium
-        transition-all duration-200 shadow-sm hover:shadow-md
-        ${VARIANT_STYLES[variant]}
-        ${SIZE_STYLES[size]}
-        ${isDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
-        ${className}
-      `}
+      className={`inline-flex shrink-0 items-center justify-center rounded-lg border font-medium transition-colors
+        ${VARIANT_STYLES[variant]} ${children ? SIZE_STYLES[size] : ICON_ONLY[size]}
+        ${isDisabled ? 'cursor-not-allowed opacity-50' : ''} ${className}`}
     >
-      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : icon}
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icon}
       {children}
     </button>
   );
