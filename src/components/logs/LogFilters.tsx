@@ -10,6 +10,8 @@ const LOG_TYPES = [
   'ZTA-SSH-ALLOW',
   'ZTA-ALLOW-D2T',
   'ZTA-ALLOW-D2U',
+  'ZTA-SSH-PUBLIC',
+  'ZTA-API-BLOCK',
 ];
 
 interface LogFiltersState {

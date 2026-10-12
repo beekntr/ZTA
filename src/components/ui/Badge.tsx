@@ -9,6 +9,8 @@ const LOG_TYPE_STYLES: Record<string, string> = {
   'ZTA-SSH-ALLOW': 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/30',
   'ZTA-ALLOW-D2T': 'bg-blue-900/40 text-blue-400 border border-blue-500/30',
   'ZTA-ALLOW-D2U': 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/30',
+  'ZTA-SSH-PUBLIC': 'bg-amber-900/40 text-amber-400 border border-amber-500/30',
+  'ZTA-API-BLOCK': 'bg-fuchsia-900/40 text-fuchsia-400 border border-fuchsia-500/30',
 };
 
 const DEFAULT_STYLE = 'bg-slate-800/40 text-slate-400 border border-slate-500/30';

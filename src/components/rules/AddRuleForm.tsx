@@ -3,7 +3,10 @@ import { Plus } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useAddRule } from '../../hooks/useRules';
-import { validateIp } from '../../services/api';
+import { errorMessage, validateIp } from '../../services/api';
+import type { RuleCreate } from '../../types';
+
+const RULE_NAME = /^[A-Za-z0-9 _.,:/()#+-]{1,64}$/;
 
 const INIT = {
   rule_name: '',
@@ -21,6 +24,8 @@ export const AddRuleForm: React.FC = () => {
   const { mutateAsync: addRule, isPending } = useAddRule();
   const { success, error } = useToast();
 
+  const portEnabled = form.protocol === 'tcp' || form.protocol === 'udp';
+
   const set = (key: keyof typeof INIT) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
     setErrors((err) => ({ ...err, [key]: '' }));
@@ -29,11 +34,15 @@ export const AddRuleForm: React.FC = () => {
   const validate = () => {
     const errs: Partial<typeof INIT> = {};
     if (!form.rule_name.trim()) errs.rule_name = 'Required';
-    if (form.src_ip && !validateIp(form.src_ip)) errs.src_ip = 'Invalid IP/CIDR';
-    if (form.dst_ip && !validateIp(form.dst_ip)) errs.dst_ip = 'Invalid IP/CIDR';
-    if (form.dst_port) {
+    else if (!RULE_NAME.test(form.rule_name.trim())) errs.rule_name = 'Letters, digits, spaces and . , : / ( ) # + - only';
+    if (form.src_ip && !validateIp(form.src_ip, true)) errs.src_ip = 'Invalid IP/CIDR (/16 or narrower)';
+    if (form.dst_ip && !validateIp(form.dst_ip, true)) errs.dst_ip = 'Invalid IP/CIDR (/16 or narrower)';
+    if (form.dst_port && portEnabled) {
       const port = parseInt(form.dst_port);
       if (isNaN(port) || port < 1 || port > 65535) errs.dst_port = '1–65535';
+    }
+    if (!form.src_ip && !form.dst_ip && !(form.dst_port && portEnabled) && form.protocol === 'any') {
+      errs.rule_name = 'Give an IP, protocol or port — a rule must not match all traffic';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -48,18 +57,18 @@ export const AddRuleForm: React.FC = () => {
         src_ip: form.src_ip || undefined,
         dst_ip: form.dst_ip || undefined,
         protocol: form.protocol || undefined,
-        dst_port: form.dst_port ? parseInt(form.dst_port) : undefined,
-        action: form.action,
-        direction: form.direction,
+        dst_port: form.dst_port && portEnabled ? parseInt(form.dst_port) : undefined,
+        action: form.action as RuleCreate['action'],
+        direction: form.direction as RuleCreate['direction'],
       });
       success('Rule Added', `"${form.rule_name}" is now active`);
       setForm(INIT);
-    } catch {
-      error('Failed to Add Rule', 'Operation failed — please try again');
+    } catch (err) {
+      error('Failed to Add Rule', errorMessage(err));
     }
   };
 
-  const field = (key: keyof typeof INIT, label: string, placeholder: string, type = 'text') => (
+  const field = (key: keyof typeof INIT, label: string, placeholder: string, type = 'text', disabled = false) => (
     <div>
       <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
       <input
@@ -67,7 +76,8 @@ export const AddRuleForm: React.FC = () => {
         value={form[key]}
         onChange={set(key)}
         placeholder={placeholder}
-        className={`w-full px-3 py-2 rounded-lg bg-[#1e2a45]/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 ${
+        disabled={disabled}
+        className={`w-full px-3 py-2 rounded-lg bg-[#1e2a45]/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 disabled:opacity-40 ${
           errors[key] ? 'border-red-500/60' : 'border-[#1e2a45]'
         }`}
       />
@@ -98,7 +108,7 @@ export const AddRuleForm: React.FC = () => {
           </select>
         </div>
         {/* Port */}
-        {field('dst_port', 'Dst Port', '1–65535', 'number')}
+        {field('dst_port', 'Dst Port', portEnabled ? '1–65535' : 'TCP/UDP only', 'number', !portEnabled)}
         {/* Action */}
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">Action</label>
@@ -116,7 +126,7 @@ export const AddRuleForm: React.FC = () => {
       <div>
         <label className="block text-xs font-medium text-slate-400 mb-1">Direction</label>
         <div className="flex gap-2">
-          {(['input', 'output', 'forward'] as const).map((dir) => (
+          {(['input', 'forward', 'output', 'all'] as const).map((dir) => (
             <button
               key={dir}
               type="button"

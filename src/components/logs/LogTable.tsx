@@ -13,6 +13,13 @@ interface Props {
 
 const PAGE_SIZE = 50;
 
+function csvCell(value: unknown): string {
+  let s = String(value ?? '');
+  // A leading = + - @ makes spreadsheets run the cell as a formula.
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
 function exportCsv(logs: Log[]) {
   const headers = ['ID', 'Timestamp', 'Type', 'Src IP', 'Dst IP', 'Protocol', 'Src Port', 'Dst Port', 'In Iface'];
   const rows = logs.map((l) => [
@@ -26,7 +33,7 @@ function exportCsv(logs: Log[]) {
     l.dst_port ?? '',
     l.in_iface,
   ]);
-  const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
+  const csv = [headers, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

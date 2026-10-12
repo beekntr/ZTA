@@ -3,7 +3,7 @@ import { ShieldBan, Clock } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useBlockIp } from '../../hooks/useRules';
-import { validateIp } from '../../services/api';
+import { errorMessage, validateIp } from '../../services/api';
 import { format } from 'date-fns';
 
 export const QuickBlockPanel: React.FC = () => {
@@ -15,8 +15,8 @@ export const QuickBlockPanel: React.FC = () => {
 
   const handleBlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateIp(ip)) {
-      setIpError('Enter a valid IP address');
+    if (!validateIp(ip, true)) {
+      setIpError('Enter a valid IP address or network (/16 or narrower)');
       return;
     }
     setIpError('');
@@ -25,8 +25,8 @@ export const QuickBlockPanel: React.FC = () => {
       success('IP Blocked', `${ip} blocked successfully`);
       setRecentBlocked((prev) => [{ ip, time: new Date() }, ...prev.slice(0, 4)]);
       setIp('');
-    } catch {
-      error('Block Failed', 'Could not block IP — operation failed');
+    } catch (err) {
+      error('Block Failed', errorMessage(err));
     }
   };
 
@@ -38,7 +38,7 @@ export const QuickBlockPanel: React.FC = () => {
             type="text"
             value={ip}
             onChange={(e) => { setIp(e.target.value); setIpError(''); }}
-            placeholder="Enter IP to block (e.g. 1.2.3.4)"
+            placeholder="IP or network to block (e.g. 1.2.3.4)"
             className={`w-full px-3 py-2 rounded-lg bg-[#1e2a45]/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-red-500/50 font-mono ${
               ipError ? 'border-red-500/60' : 'border-[#1e2a45]'
             }`}

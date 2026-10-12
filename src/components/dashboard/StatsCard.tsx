@@ -51,15 +51,18 @@ function useAnimatedCount(target: number, duration = 1000) {
     const diff = target - start;
     if (diff === 0) return;
     const startTime = performance.now();
+    let raf = 0;
     const frame = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.round(start + diff * eased));
-      if (progress < 1) requestAnimationFrame(frame);
-      else prevRef.current = target;
+      const value = Math.round(start + diff * eased);
+      prevRef.current = value; // an interrupted animation resumes from here
+      setCount(value);
+      if (progress < 1) raf = requestAnimationFrame(frame);
     };
-    requestAnimationFrame(frame);
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
   }, [target, duration]);
 
   return count;

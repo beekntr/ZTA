@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ShieldBan, Globe } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useBlockIp } from '../../hooks/useRules';
+import { errorMessage } from '../../services/api';
 import type { Attacker, GeoInfo } from '../../types';
 
 interface Props {
@@ -11,19 +12,30 @@ interface Props {
   loading?: boolean;
 }
 
-async function fetchGeo(ip: string): Promise<GeoInfo | null> {
-  try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,isp`);
-    const data = await res.json();
-    if (data.status === 'success') return data as GeoInfo;
-    return null;
-  } catch {
-    return null;
+// HTTPS provider (the old http:// lookup was blocked as mixed content on the
+// HTTPS site). Cached per page load so polling does not repeat lookups.
+const geoCache = new Map<string, Promise<GeoInfo | null>>();
+const PRIVATE_IP = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
+
+function fetchGeo(ip: string): Promise<GeoInfo | null> {
+  if (PRIVATE_IP.test(ip)) return Promise.resolve(null);
+  let pending = geoCache.get(ip);
+  if (!pending) {
+    pending = fetch(`https://ipwho.is/${encodeURIComponent(ip)}`)
+      .then((res) => res.json())
+      .then((data) =>
+        data?.success
+          ? { country: data.country, countryCode: data.country_code, city: data.city, isp: data.connection?.isp ?? '' }
+          : null,
+      )
+      .catch(() => null);
+    geoCache.set(ip, pending);
   }
+  return pending;
 }
 
 export const AttackerLeaderboard: React.FC<Props> = ({ attackers: attackersProp, loading }) => {
-  const attackers = Array.isArray(attackersProp) ? attackersProp : [];
+  const attackers = useMemo(() => (Array.isArray(attackersProp) ? attackersProp : []), [attackersProp]);
   const { mutateAsync: blockIp } = useBlockIp();
   const { success, error } = useToast();
   const [blocking, setBlocking] = useState<Set<string>>(new Set());
@@ -31,11 +43,15 @@ export const AttackerLeaderboard: React.FC<Props> = ({ attackers: attackersProp,
 
   // Fetch geo for top 5 attackers
   useEffect(() => {
-    attackers.slice(0, 5).forEach(async (a) => {
-      if (geoData[a.src_ip] !== undefined) return;
-      const geo = await fetchGeo(a.src_ip);
-      setGeoData((prev) => ({ ...prev, [a.src_ip]: geo }));
+    let cancelled = false;
+    attackers.slice(0, 5).forEach((a) => {
+      fetchGeo(a.src_ip).then((geo) => {
+        if (!cancelled) setGeoData((prev) => (a.src_ip in prev ? prev : { ...prev, [a.src_ip]: geo }));
+      });
     });
+    return () => {
+      cancelled = true;
+    };
   }, [attackers]);
 
   const handleBlock = async (ip: string) => {
@@ -43,8 +59,8 @@ export const AttackerLeaderboard: React.FC<Props> = ({ attackers: attackersProp,
     try {
       await blockIp(ip);
       success('IP Blocked', `${ip} added to blocklist`);
-    } catch {
-      error('Block Failed', 'Operation failed');
+    } catch (err) {
+      error('Block Failed', errorMessage(err));
     } finally {
       setBlocking((s) => { const n = new Set(s); n.delete(ip); return n; });
     }

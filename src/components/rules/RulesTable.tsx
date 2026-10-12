@@ -4,6 +4,7 @@ import { Trash2, ShieldCheck, ShieldX } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useDeleteRule } from '../../hooks/useRules';
+import { errorMessage } from '../../services/api';
 import type { FirewallRule } from '../../types';
 
 interface Props {
@@ -20,9 +21,9 @@ export const RulesTable: React.FC<Props> = ({ rules, loading }) => {
     setDeleting((s) => new Set([...s, id]));
     try {
       await deleteRule(id);
-      success('Rule Deleted', `Rule #${id} has been removed`);
-    } catch {
-      error('Delete Failed', 'Could not delete rule');
+      success('Rule Deactivated', `Rule #${id} was removed from the firewall`);
+    } catch (err) {
+      error('Delete Failed', errorMessage(err));
     } finally {
       setDeleting((s) => { const n = new Set(s); n.delete(id); return n; });
     }
@@ -96,13 +97,16 @@ export const RulesTable: React.FC<Props> = ({ rules, loading }) => {
                 )}
               </td>
               <td className="px-3 py-2.5">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  icon={<Trash2 className="w-3 h-3" />}
-                  loading={deleting.has(rule.id)}
-                  onClick={() => handleDelete(rule.id)}
-                />
+                {rule.is_active ? (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    icon={<Trash2 className="w-3 h-3" />}
+                    loading={deleting.has(rule.id)}
+                    onClick={() => handleDelete(rule.id)}
+                    aria-label={`Deactivate rule ${rule.id}`}
+                  />
+                ) : null}
               </td>
             </tr>
           ))}

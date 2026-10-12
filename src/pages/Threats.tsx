@@ -1,6 +1,7 @@
 import React from 'react';
 import { Crosshair, Trophy, Activity, Globe } from 'lucide-react';
-import { useAttackers, useLogs } from '../hooks/useLogs';
+import { useAttackers } from '../hooks/useLogs';
+import { useThreatStats } from '../hooks/useStats';
 import { AttackerLeaderboard } from '../components/threats/AttackerLeaderboard';
 import { AttackPatternChart } from '../components/threats/AttackPatternChart';
 import { LiveAttackFeed } from '../components/threats/LiveAttackFeed';
@@ -9,10 +10,9 @@ import { format, parseISO } from 'date-fns';
 
 export const Threats: React.FC = () => {
   const { data: attackersRaw, isLoading: attackersLoading } = useAttackers(20);
-  const { data: allLogsRaw } = useLogs({ limit: 200 });
+  const { data: threatStats, isLoading: threatsLoading } = useThreatStats(24);
 
   const attackers = Array.isArray(attackersRaw) ? attackersRaw : [];
-  const allLogs = Array.isArray(allLogsRaw) ? allLogsRaw : [];
 
   // Build geo table from attacker data (top 10)
   const geoTableData = attackers.slice(0, 10);
@@ -24,7 +24,7 @@ export const Threats: React.FC = () => {
         <Card>
           <CardHeader
             title="Attacker Leaderboard"
-            subtitle="Top threats ranked by attempt count"
+            subtitle="Internet sources dropped in the last 7 days"
             icon={<Trophy className="w-4 h-4" />}
           />
           <AttackerLeaderboard attackers={attackers} loading={attackersLoading} />
@@ -44,10 +44,10 @@ export const Threats: React.FC = () => {
       <Card>
         <CardHeader
           title="Attack Pattern Analysis"
-          subtitle="Hourly trends and protocol distribution"
+          subtitle="Internet attacks per hour and by protocol (own devices excluded)"
           icon={<Activity className="w-4 h-4" />}
         />
-        <AttackPatternChart logs={allLogs} />
+        <AttackPatternChart data={threatStats} loading={threatsLoading} />
       </Card>
 
       {/* Geographic table */}

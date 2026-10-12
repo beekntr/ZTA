@@ -4,6 +4,7 @@ import { ShieldBan } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useBlockIp } from '../../hooks/useRules';
+import { errorMessage } from '../../services/api';
 import type { Attacker } from '../../types';
 
 interface Props {
@@ -25,8 +26,8 @@ export const TopAttackersTable: React.FC<Props> = ({ data, loading }) => {
       success('IP Blocked', `${ip} has been added to blocklist`);
       setCooldown((s) => new Set([...s, ip]));
       setTimeout(() => setCooldown((s) => { const n = new Set(s); n.delete(ip); return n; }), 3000);
-    } catch {
-      error('Block Failed', 'Could not block IP — operation failed');
+    } catch (err) {
+      error('Block Failed', errorMessage(err));
     } finally {
       setBlocking((s) => { const n = new Set(s); n.delete(ip); return n; });
     }

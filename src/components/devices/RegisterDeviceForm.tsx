@@ -3,13 +3,16 @@ import { Cpu } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useRegisterDevice } from '../../hooks/useDevices';
-import { validateIp } from '../../services/api';
+import { errorMessage, validateIp } from '../../services/api';
+
+const MAC = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
+const HOSTNAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/;
 
 const INIT = {
   ip_address: '',
   mac_address: '',
   hostname: '',
-  zone: 'trusted',
+  zone: 'untrust', // zero trust: nothing is trusted by default
 };
 
 export const RegisterDeviceForm: React.FC = () => {
@@ -26,6 +29,8 @@ export const RegisterDeviceForm: React.FC = () => {
   const validate = () => {
     const errs: Partial<typeof INIT> = {};
     if (!form.ip_address || !validateIp(form.ip_address)) errs.ip_address = 'Valid IP required';
+    if (form.mac_address && !MAC.test(form.mac_address.trim())) errs.mac_address = 'Format AA:BB:CC:DD:EE:FF';
+    if (form.hostname && !HOSTNAME.test(form.hostname.trim())) errs.hostname = 'Letters, digits, . _ - only';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -36,14 +41,14 @@ export const RegisterDeviceForm: React.FC = () => {
     try {
       await registerDevice({
         ip_address: form.ip_address.trim(),
-        mac_address: form.mac_address || undefined,
-        hostname: form.hostname || undefined,
+        mac_address: form.mac_address.trim() || undefined,
+        hostname: form.hostname.trim() || undefined,
         zone: form.zone || undefined,
       });
       success('Device Registered', `${form.ip_address} added to registry`);
       setForm(INIT);
-    } catch {
-      error('Registration Failed', 'Could not register device');
+    } catch (err) {
+      error('Registration Failed', errorMessage(err));
     }
   };
 
@@ -69,8 +74,11 @@ export const RegisterDeviceForm: React.FC = () => {
           value={form.mac_address}
           onChange={set('mac_address')}
           placeholder="AA:BB:CC:DD:EE:FF"
-          className="w-full px-3 py-2 rounded-lg bg-border/40 border border-border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 font-mono"
+          className={`w-full px-3 py-2 rounded-lg bg-border/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 font-mono ${
+            errors.mac_address ? 'border-red-500/60' : 'border-border'
+          }`}
         />
+        {errors.mac_address && <p className="text-xs text-red-400 mt-1">{errors.mac_address}</p>}
       </div>
       <div>
         <label className="block text-xs font-medium text-slate-400 mb-1">Hostname</label>
@@ -79,8 +87,11 @@ export const RegisterDeviceForm: React.FC = () => {
           value={form.hostname}
           onChange={set('hostname')}
           placeholder="e.g. workstation-01"
-          className="w-full px-3 py-2 rounded-lg bg-border/40 border border-border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50"
+          className={`w-full px-3 py-2 rounded-lg bg-border/40 border text-slate-300 text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 ${
+            errors.hostname ? 'border-red-500/60' : 'border-border'
+          }`}
         />
+        {errors.hostname && <p className="text-xs text-red-400 mt-1">{errors.hostname}</p>}
       </div>
       <div>
         <label className="block text-xs font-medium text-slate-400 mb-1">Zone</label>
@@ -89,8 +100,8 @@ export const RegisterDeviceForm: React.FC = () => {
           onChange={set('zone')}
           className="w-full px-3 py-2 rounded-lg bg-border/40 border border-border text-slate-300 text-sm focus:outline-none focus:border-cyan-500/50"
         >
-          <option value="trusted">Trusted</option>
           <option value="untrust">Untrust</option>
+          <option value="trusted">Trusted</option>
           <option value="dmz">DMZ</option>
         </select>
       </div>

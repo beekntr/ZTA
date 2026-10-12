@@ -9,6 +9,7 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { StatsCard } from '../components/dashboard/StatsCard';
 import { validateIp } from '../services/api';
+import { ReadOnlyNotice } from '../components/ui/ReadOnlyNotice';
 
 export const Devices: React.FC = () => {
   const { data: devicesData, isLoading } = useDevices();
@@ -20,8 +21,9 @@ export const Devices: React.FC = () => {
   const { data: trustData, isLoading: trustLoading } = useDeviceTrust(checkIp, checkIp.length > 0);
 
   const trusted = devices.filter((d) => d.trust_score > 70);
-  const suspicious = devices.filter((d) => d.trust_score >= 30 && d.trust_score <= 70);
-  const blocked = devices.filter((d) => d.trust_score < 30 || d.is_blocked);
+  // Same thresholds as the API: > 70 trusted, > 30 suspicious, otherwise blocked
+  const suspicious = devices.filter((d) => !d.is_blocked && d.trust_score > 30 && d.trust_score <= 70);
+  const blocked = devices.filter((d) => d.trust_score <= 30 || d.is_blocked);
 
   const handleTrustCheck = () => {
     if (!validateIp(trustIp)) {
@@ -34,6 +36,8 @@ export const Devices: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <ReadOnlyNotice />
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
@@ -56,7 +60,7 @@ export const Devices: React.FC = () => {
           value={suspicious.length}
           icon={<AlertTriangle className="w-5 h-5" />}
           color="amber"
-          trendValue="Score 30–70"
+          trendValue="Score 31–70"
           loading={isLoading}
         />
         <StatsCard
@@ -64,7 +68,7 @@ export const Devices: React.FC = () => {
           value={blocked.length}
           icon={<ShieldX className="w-5 h-5" />}
           color="red"
-          trendValue="Score < 30"
+          trendValue="Score ≤ 30 or blocked"
           loading={isLoading}
         />
       </div>

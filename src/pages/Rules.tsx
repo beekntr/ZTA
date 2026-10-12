@@ -5,6 +5,7 @@ import { RulesTable } from '../components/rules/RulesTable';
 import { AddRuleForm } from '../components/rules/AddRuleForm';
 import { QuickBlockPanel } from '../components/rules/QuickBlockPanel';
 import { Card, CardHeader } from '../components/ui/Card';
+import { ReadOnlyNotice } from '../components/ui/ReadOnlyNotice';
 
 export const Rules: React.FC = () => {
   const { data, isLoading } = useRules();
@@ -13,6 +14,8 @@ export const Rules: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <ReadOnlyNotice />
+
       {/* Active rules */}
       <Card>
         <CardHeader

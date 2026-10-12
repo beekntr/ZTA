@@ -17,6 +17,8 @@ const LOG_COLORS: Record<string, string> = {
   'ZTA-SSH-ALLOW': '#00ff88',
   'ZTA-ALLOW-D2T': '#00d4ff',
   'ZTA-ALLOW-D2U': '#00aacc',
+  'ZTA-SSH-PUBLIC': '#ffaa00',
+  'ZTA-API-BLOCK': '#d946ef',
 };
 
 const DEFAULT_COLORS = ['#00d4ff', '#ff3366', '#00ff88', '#ffaa00', '#8b5cf6', '#ec4899', '#14b8a6'];

@@ -15,14 +15,11 @@ export const Dashboard: React.FC = () => {
   const { data: attackersRaw, isLoading: attackersLoading } = useAttackers(10);
   const attackers = Array.isArray(attackersRaw) ? attackersRaw : [];
 
-  const getCount = (logType: string) =>
-    stats?.by_type.find((b) => b.log_type === logType)?.count ?? 0;
-
-  const inputDrops = getCount('ZTA-INPUT-DROP');
-  // Sum all log types that indicate a blocked connection
+  const days = stats?.window_days ?? 7;
+  // Every log type that means a packet was stopped (drops and zone blocks)
   const byType = Array.isArray(stats?.by_type) ? stats.by_type : [];
   const blocked = byType
-    .filter((b) => b.log_type.includes('BLOCK'))
+    .filter((b) => b.log_type.includes('BLOCK') || b.log_type.includes('DROP'))
     .reduce((sum, b) => sum + b.count, 0);
 
   return (
@@ -34,26 +31,23 @@ export const Dashboard: React.FC = () => {
           value={stats?.total_logs ?? 0}
           icon={<Activity className="w-5 h-5" />}
           color="cyan"
-          trend="up"
-          trendValue="All time"
+          trendValue={`Last ${days} days`}
           loading={isLoading}
         />
         <StatsCard
-          title="Active Threats"
-          value={inputDrops}
+          title="Unique Attackers"
+          value={stats?.unique_attackers ?? 0}
           icon={<ShieldAlert className="w-5 h-5" />}
           color="red"
-          trend="up"
-          trendValue="INPUT drops"
+          trendValue={`Internet IPs, last ${days} days`}
           loading={isLoading}
         />
         <StatsCard
-          title="Blocked Connections"
+          title="Blocked Packets"
           value={blocked}
           icon={<ShieldOff className="w-5 h-5" />}
           color="amber"
-          trend="neutral"
-          trendValue="U2T + T2U"
+          trendValue={`Drops + zone blocks, ${days} days`}
           loading={isLoading}
         />
         <StatsCard
@@ -71,7 +65,7 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardHeader
             title="Log Type Breakdown"
-            subtitle="Traffic classification by ZTA policy"
+            subtitle={`Traffic classification by ZTA policy — last ${days} days`}
             icon={<PieChart className="w-4 h-4" />}
           />
           {isLoading ? (
@@ -100,7 +94,7 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardHeader
             title="Top Attackers"
-            subtitle="Ranked by attempt count"
+            subtitle="Internet sources ranked by attempts — last 7 days"
             icon={<Users className="w-4 h-4" />}
           />
           <TopAttackersTable data={attackers} loading={attackersLoading} />

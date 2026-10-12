@@ -3,12 +3,20 @@
 // ============================================================
 
 export interface Stats {
+  window_days: number;
   total_logs: number;
   by_type: Array<{ log_type: string; count: number }>;
   top_attackers: Array<{ src_ip: string; attempts: number }>;
+  unique_attackers: number;
   daily_activity: Array<{ date: string; count: number }>;
   active_rules: number;
   total_devices: number;
+}
+
+export interface ThreatStats {
+  hours: number;
+  hourly: Array<{ hour: string; count: number }>;
+  protocols: Array<{ protocol: string; count: number }>;
 }
 
 export interface Log {
@@ -71,8 +79,8 @@ export interface RuleCreate {
   dst_ip?: string;
   protocol?: string;
   dst_port?: number;
-  action: string;
-  direction: string;
+  action: 'block' | 'allow';
+  direction: 'input' | 'output' | 'forward' | 'all';
 }
 
 export interface DeviceRegister {
@@ -86,15 +94,14 @@ export interface LogFilters {
   limit?: number;
   log_type?: string;
   src_ip?: string;
+  exclude_internal?: boolean;
 }
 
 export interface GeoInfo {
   country: string;
   countryCode: string;
-  regionName: string;
   city: string;
   isp: string;
-  status: string;
 }
 
 export type TrustStatus = 'trusted' | 'suspicious' | 'blocked';
@@ -106,4 +113,6 @@ export type LogType =
   | 'ZTA-SSH-ALLOW'
   | 'ZTA-ALLOW-D2T'
   | 'ZTA-ALLOW-D2U'
+  | 'ZTA-SSH-PUBLIC'
+  | 'ZTA-API-BLOCK'
   | string;

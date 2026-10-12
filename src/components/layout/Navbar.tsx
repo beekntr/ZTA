@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wifi, WifiOff, Clock } from 'lucide-react';
+import { Wifi, WifiOff, Clock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { getHealth } from '../../services/api';
+import type { HealthState } from '../../services/api';
+import { AdminButton } from './AdminButton';
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
@@ -14,14 +16,13 @@ const PAGE_TITLES: Record<string, string> = {
 
 export const Navbar: React.FC = () => {
   const { pathname } = useLocation();
-  const [connected, setConnected] = useState<boolean | null>(null);
+  const [health, setHealth] = useState<HealthState | null>(null);
   const [time, setTime] = useState(new Date());
 
-  // Connection status polling every 30s
+  // API health (database + firewall) polling every 30s
   useEffect(() => {
     const check = async () => {
-      const ok = await getHealth();
-      setConnected(ok);
+      setHealth(await getHealth());
     };
     check();
     const id = setInterval(check, 30_000);
@@ -57,23 +58,31 @@ export const Navbar: React.FC = () => {
         {/* Connection status */}
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${
-            connected === null
+            health === null
               ? 'border-slate-600/40 text-slate-500 bg-slate-800/30'
-              : connected
+              : health === 'ok'
                 ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
-                : 'border-red-500/30 text-red-400 bg-red-500/10'
+                : health === 'degraded'
+                  ? 'border-amber-500/30 text-amber-400 bg-amber-500/10'
+                  : 'border-red-500/30 text-red-400 bg-red-500/10'
           }`}
+          title={health === 'degraded' ? 'API reachable, but the database or firewall check failed' : undefined}
         >
-          {connected === null ? (
+          {health === null ? (
             <>
               <span className="w-2 h-2 rounded-full bg-slate-500 animate-pulse" />
               Checking…
             </>
-          ) : connected ? (
+          ) : health === 'ok' ? (
             <>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <Wifi className="w-3 h-3" />
               Connected
+            </>
+          ) : health === 'degraded' ? (
+            <>
+              <AlertTriangle className="w-3 h-3" />
+              Degraded
             </>
           ) : (
             <>
@@ -83,6 +92,8 @@ export const Navbar: React.FC = () => {
             </>
           )}
         </div>
+
+        <AdminButton />
       </div>
     </header>
   );

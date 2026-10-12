@@ -6,6 +6,7 @@ import { ZoneBadge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useBlockIp } from '../../hooks/useRules';
+import { errorMessage } from '../../services/api';
 import type { Device } from '../../types';
 
 interface Props {
@@ -20,8 +21,8 @@ export const DeviceCard: React.FC<Props> = ({ device }) => {
     try {
       await blockIp(device.ip_address);
       success('Device Blocked', `${device.ip_address} has been blocked`);
-    } catch {
-      error('Block Failed', 'Could not block device');
+    } catch (err) {
+      error('Block Failed', errorMessage(err));
     }
   };
 

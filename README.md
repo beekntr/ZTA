@@ -1,32 +1,40 @@
-# React + TypeScript + Vite
+# ZTA Firewall Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Web dashboard for a Zero Trust firewall built on nftables. It shows live
+firewall logs, attack statistics and the device registry, and lets an
+administrator add firewall rules, block IP addresses and register devices.
 
-Currently, two official plugins are available:
+Live: https://firewall.kshitijsinghbhati.in
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Page | Shows |
+|---|---|
+| Dashboard | Events, unique attackers and blocked packets (last 7 days), log types, daily activity, top attackers, recent logs |
+| Live Logs | Filterable log table with raw kernel log lines and CSV export |
+| Firewall Rules | Active rules, add rule, quick block |
+| Devices | Registered devices by zone (trusted / untrust / DMZ) with trust scores |
+| Threat Intel | Attacker leaderboard with geolocation, live attack feed, attacks per hour |
 
-## React Compiler
+## Read-only demo and admin mode
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Anyone can view the dashboard. Changing the firewall needs the admin key: click
+**Read-only** at the top right and enter it. The key is checked by the API, kept
+only for the current browser tab, and every admin action is audited on the server.
 
-## Expanding the Oxlint configuration
+## Development
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
+cp .env.example .env        # DEV_API_TARGET = where the FastAPI backend runs
+npm run dev                 # http://localhost:3000, /api is proxied to the backend
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Production
+
+`./deploy.sh` on the server (run as a normal user, not root) pulls the code,
+builds it, and configures nginx: it serves the app, proxies `/api` to the
+backend, and sends the security headers (CSP, HSTS, frame and content-type
+protection).
+
+Stack: React 19, TypeScript, Vite, TanStack Query, Tailwind CSS, Recharts.
+Backend: FastAPI + MySQL + nftables (separate `zta_engine` project).
+Geolocation of attacker IPs uses ipwho.is from the visitor's browser.
