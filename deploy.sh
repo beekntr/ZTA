@@ -6,7 +6,7 @@
 #
 # Run as your normal user (NOT with sudo): ./deploy.sh
 # Only the nginx steps use sudo, so npm and git never run as root.
-# If the API is not at 192.168.1.6:8000:  API_UPSTREAM=http://127.0.0.1:8000 ./deploy.sh
+# nginx and the API run on the same server. Otherwise: API_UPSTREAM=http://<api-host>:8000 bash deploy.sh
 # ==============================================================================
 
 set -euo pipefail
@@ -14,7 +14,7 @@ set -euo pipefail
 DOMAIN="firewall.kshitijsinghbhati.in"
 TARGET_DIR="/var/www/zta-dashboard"
 REPO="https://github.com/beekntr/ZTA.git"
-API_UPSTREAM="${API_UPSTREAM:-http://192.168.1.6:8000}"
+API_UPSTREAM="${API_UPSTREAM:-http://127.0.0.1:8000}"
 
 if [ "$(id -u)" -eq 0 ]; then
     echo "Run this as your normal user, not root; it calls sudo only where needed."
